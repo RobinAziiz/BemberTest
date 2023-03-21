@@ -1,0 +1,154 @@
+﻿@{
+    ViewBag.Title = "Lägg till anställd";
+}
+
+<h2>@ViewBag.Title</h2>
+
+<div id="mainApp">
+    <div id="app">
+        <form v-on:submit.prevent="submitForm">
+            <label for="name">Namn:</label>
+            <input type="text" id="name" v-model="anstalld.anstalldNamn" required />
+            <label for="name">Företag:</label>
+            <input type="text" id="foretag" v-model="anstalld.foretag" required />
+            <button type="submit">Lägg till anställd</button>
+        </form>
+    </div>
+
+    <div id="anstallda-list">
+        <table>
+            <thead>
+                <tr>
+                    <th>Anställdnamn</th>
+                    <th>Företag</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="anstalld in anstallda" :key="anstalld.anstalldId">
+                    <td>
+                        {{anstalld.anstalldNamn}}
+                    </td>
+                    <td>{{anstalld.foretag}}</td>
+                    <td><button v-on:click="deleteAnstalld(anstalld.anstalldId)">Radera</button></td>
+                    <td>
+                        <button v-on:click="openModal(anstalld)">Redigera</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="edit-modal" v-if="showModal" class="modal">
+        <div class="modal-content">
+            <span class="close" v-on:click="closeModal">&times;</span>
+            <form v-on:submit.prevent="editAnstalld">
+                <label for="edit-name">Namn:</label>
+                <input type="text" id="edit-name" v-model="selectedAnstalld.anstalldNamn" required />
+                <label for="edit-foretag">Företag:</label>
+                <input type="text" id="edit-foretag" v-model="selectedAnstalld.foretag" required />
+                <button type="submit">Spara ändringar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        new Vue({
+            el: "#mainApp",
+            data: {
+                anstalld: {
+                    anstalldNamn: "",
+                    foretag: "",
+                },
+                anstallda: [],
+                showModal: false,
+                selectedAnstalld: null,
+            },
+            // hämtar anställda
+            async mounted() {
+                try {
+                    const response = await fetch("/api/Anstalld");
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                    }
+
+                    this.anstallda = await response.json();
+                    console.log(this.anstallda);
+                } catch (error) {
+                    console.error("Failed to fetch anstallda:", error);
+                }
+            },
+            methods: {
+                // lägger till anställda och nollställer fält
+                async submitForm() {
+                    try {
+                        const response = await fetch("/api/Anstalld", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify(this.anstalld),
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error ${response.status}`);
+                        }
+
+                        const newAnstalld = await response.json();
+                        this.anstallda.push(newAnstalld);
+                        this.anstalld.anstalldNamn = "";
+                        this.anstalld.foretag = "";
+                    } catch (error) {
+                        console.error("Failed to add anstalld:", error);
+                    }
+                },
+                openModal(anstalld) {
+                    console.log('hej')
+                    this.selectedAnstalld = JSON.parse(JSON.stringify(anstalld));
+                    this.showModal = true;
+                },
+                closeModal() {
+                    this.showModal = false;
+                },
+                async editAnstalld() {
+                    try {
+                        const response = await fetch(`/api/Anstalld/${this.selectedAnstalld.anstalldId}`, {
+                            method: "PUT",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify(this.selectedAnstalld),
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error ${response.status}`);
+                        }
+
+                        const index = this.anstallda.findIndex(anstalld => anstalld.anstalldId === this.selectedAnstalld.anstalldId);
+                        this.anstallda.splice(index, 1, this.selectedAnstalld);
+                        this.closeModal();
+                    } catch (error) {
+                        console.error("Failed to edit anstalld:", error);
+                    }
+                },
+                async deleteAnstalld(id) {
+                    console.log(id)
+                    try {
+                        const response = await fetch(`/api/Anstalld/${id}`, {
+                            method: "DELETE",
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error ${response.status}`);
+                        }
+
+                        this.anstallda = this.anstallda.filter(anstalld => anstalld.anstalldId !== id);
+                    } catch (error) {
+                        console.error("Failed to delete anstalld:", error);
+                    }
+                }
+            }
+        });
+    </script>
+}
